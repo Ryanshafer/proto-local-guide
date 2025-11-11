@@ -1,0 +1,14 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { PrototypeFlow } from "@/features/prototype-flow";
+---
+
+<BaseLayout
+  title="Prototype Flow"
+  description="Explore the warning dialog and profile preview states in a single interactive flow."
+  showHeader={false}
+  showFooter={false}
+  bodyClass="bg-surface"
+>
+  <PrototypeFlow client:load />
+</BaseLayout>

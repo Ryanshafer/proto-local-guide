@@ -1,0 +1,10 @@
+{
+  "networkName": "Aranceto Guest",
+  "password": "jen&ryan",
+  "shareNote": "Have your friend scan this code with their phone’s Camera to connect.",
+  "instructions": [
+    "Scan the QR code to auto-join on iOS/Android.",
+    "Manual entry: Settings → Wi-Fi → Aranceto Guest.",
+    "Need a faster line? Ethernet jack lives inside the desk drawer."
+  ]
+}
