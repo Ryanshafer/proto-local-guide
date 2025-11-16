@@ -56,25 +56,21 @@ jobs:
 
       - name: Copy existing versions into dist
         run: |
-          if [ -d gh-pages ]; then
-            shopt -s nullglob
-            for dir in gh-pages/v*/ ; do
-              cp -R "$dir" dist/
-            done
-          fi
+          shopt -s nullglob
+          for dir in gh-pages/v*/ ; do
+            target="dist/$(basename "$dir")"
+            rm -rf "$target"
+            cp -R "$dir" "$target"
+          done
 
       - name: Prepare version folders
         if: >
           github.event_name == 'workflow_dispatch' && github.event.inputs.createVersion == 'true'
           || contains(github.event.head_commit.message, 'deploy-version')
         run: |
-          if [ -d gh-pages ]; then
-            cd gh-pages
-            versions=$(ls -d v* 2>/dev/null || echo "")
-            cd ..
-          else
-            versions=""
-          fi
+          cd gh-pages
+          versions=$(ls -d v* 2>/dev/null || echo "")
+          cd ..
           if [ -z "$versions" ]; then
             nextVersion=v1
           else
@@ -83,9 +79,8 @@ jobs:
             nextVersion="v$next"
           fi
           echo NEXT_VERSION=$nextVersion >> $GITHUB_ENV
-          cd ..
           mkdir -p dist/${nextVersion}
-          cp -r dist-base/* dist/${nextVersion}/
+          cp -r dist-base/. dist/${nextVersion}/
 
       - name: Cleanup snapshot
         run: |
