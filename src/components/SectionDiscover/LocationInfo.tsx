@@ -31,6 +31,7 @@ interface LocationInfoProps {
   detail?: DiscoverLocationDetail | null;
   markerName?: string;
   hideTitle?: boolean;
+  variant?: "default" | "compact";
 }
 
 const LocationInfo = ({
@@ -39,7 +40,13 @@ const LocationInfo = ({
   detail,
   markerName,
   hideTitle = false,
+  variant = "default",
 }: LocationInfoProps) => {
+  const formatDistanceLabel = (label?: string | null) => {
+    if (!label) return label ?? "";
+    return label.replace(/\b(\d+)\s+min\b/gi, "$1m");
+  };
+
   const computeHoursMeta = (hours?: DiscoverLocationDetail["hours"]) => {
     if (!hours) return null;
     const createDate = (time: string) => {
@@ -69,9 +76,11 @@ const LocationInfo = ({
   };
 
   const hoursMeta = computeHoursMeta(detail?.hours);
+  const formattedDistance = detail?.distance ? formatDistanceLabel(detail.distance) : "";
+  const isCompact = variant === "compact";
 
   return (
-    <div className="space-y-1">
+    <div className={isCompact ? "space-y-1.5 text-sm" : "space-y-1"}>
       {!hideTitle && markerName ? (
         <p className="text-lg font-semibold text-neutral-950">{markerName}</p>
       ) : null}
@@ -87,20 +96,40 @@ const LocationInfo = ({
             </span>
           </div>
           <p className="text-sm font-base text-neutral-950">{detail.cuisine}</p>
-          {hoursMeta ? (
-            <div className="flex flex-wrap items-center gap-1 text-sm">
-              <span
-                className={
-                  hoursMeta.isOpen ? "font-base text-emerald-600" : "font-base text-red-700"
-                }
-              >
-                {hoursMeta.isOpen ? "Open now" : "Closed"}
-              </span>
-              <span className="text-slate-400">·</span>
-              <span className="font-base text-neutral-950">{hoursMeta.label}</span>
+          {isCompact ? (
+            <div className="flex flex-wrap items-center gap-1 text-sm text-neutral-600">
+              {hoursMeta ? (
+                <>
+                  <span className={hoursMeta.isOpen ? "text-emerald-600" : "text-red-700"}>
+                    {hoursMeta.isOpen ? "Open now" : "Closed"}
+                  </span>
+                  <span className="text-slate-400">·</span>
+                  <span className="text-neutral-900">{hoursMeta.label}</span>
+                </>
+              ) : null}
+              {hoursMeta && formattedDistance ? <span className="text-slate-400">·</span> : null}
+              {formattedDistance ? (
+                <span className="text-neutral-600">{formattedDistance}</span>
+              ) : null}
             </div>
-          ) : null}
-          <p className="text-sm text-neutral-500">{detail.distance}</p>
+          ) : (
+            <>
+              {hoursMeta ? (
+                <div className="flex flex-wrap items-center gap-1 text-sm">
+                  <span
+                    className={
+                      hoursMeta.isOpen ? "font-base text-emerald-600" : "font-base text-red-700"
+                    }
+                  >
+                    {hoursMeta.isOpen ? "Open now" : "Closed"}
+                  </span>
+                  <span className="text-slate-400">·</span>
+                  <span className="font-base text-neutral-950">{hoursMeta.label}</span>
+                </div>
+              ) : null}
+              <p className="text-sm text-neutral-500">{formattedDistance}</p>
+            </>
+          )}
         </>
       ) : (
         <>

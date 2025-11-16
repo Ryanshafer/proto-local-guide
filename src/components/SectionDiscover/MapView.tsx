@@ -18,6 +18,7 @@ type MapViewProps = {
   markers: DiscoverLocation[];
   selectedMarkerId: string | null;
   onMarkerSelect: (id: string) => void;
+  offsetForOverlay?: boolean;
 };
 
 const MAPBOX_TOKEN =
@@ -31,7 +32,7 @@ if (import.meta.env.DEV) {
   console.log("PUBLIC_MAPBOX_TOKEN present:", Boolean(import.meta.env.PUBLIC_MAPBOX_TOKEN));
 }
 
-const MapView = ({ markers, selectedMarkerId, onMarkerSelect }: MapViewProps) => {
+const MapView = ({ markers, selectedMarkerId, onMarkerSelect, offsetForOverlay = false }: MapViewProps) => {
   const [mapKit, setMapKit] = useState<{
     Map: MapModule["Map"];
     Marker: MapModule["Marker"];
@@ -72,13 +73,14 @@ const MapView = ({ markers, selectedMarkerId, onMarkerSelect }: MapViewProps) =>
     if (!selectedMarkerId) return;
     const location = markers.find((item) => item.id === selectedMarkerId);
     if (!location) return;
+    const latitudeOffset = offsetForOverlay ? 0.01 : 0;
     setViewState((prev) => ({
       ...prev,
-      latitude: location.latitude,
+      latitude: location.latitude - latitudeOffset,
       longitude: location.longitude,
       zoom: Math.max(prev.zoom, 13.2),
     }));
-  }, [selectedMarkerId, markers]);
+  }, [selectedMarkerId, markers, offsetForOverlay]);
 
   const { Map, Marker } = mapKit ?? {};
 

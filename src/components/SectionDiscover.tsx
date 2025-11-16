@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import MapView from "./SectionDiscover/MapView";
 import BottomSheet from "./SectionDiscover/BottomSheet";
-import MarkerCard from "./SectionDiscover/MarkerCard";
+import TopSheet from "./SectionDiscover/TopSheet";
 // Temporary mock data — replace with backend response or CMS integration.
 import discoverData from "@/data/discover.json";
 import type { DiscoverCategory, DiscoverLocation } from "@/features/types";
@@ -28,6 +28,7 @@ const SectionDiscover = () => {
     "all",
   );
   const [isDesktopSheet, setIsDesktopSheet] = useState(false);
+  const [isTopSheetVisible, setIsTopSheetVisible] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -84,7 +85,41 @@ const SectionDiscover = () => {
 
   const handleMarkerSelect = (id: string) => {
     setActiveMarkerId(id);
+    if (!isDesktopSheet) {
+      setIsTopSheetVisible(true);
+      setSheetState("collapsed");
+    }
   };
+
+  const shouldOffsetMap = Boolean(
+    !isDesktopSheet && isTopSheetVisible && activeMarkerId,
+  );
+  const mapMarkers =
+    shouldOffsetMap && activeMarker ? [activeMarker] : filteredLocations;
+
+  const clearActiveMarker = () => {
+    setActiveMarkerId(null);
+    setIsTopSheetVisible(false);
+  };
+
+  const handleTopSheetDismiss = () => {
+    clearActiveMarker();
+    if (!isDesktopSheet) {
+      setSheetState("expanded");
+    }
+  };
+
+  useEffect(() => {
+    if (!activeMarkerId) {
+      setIsTopSheetVisible(false);
+    }
+  }, [activeMarkerId]);
+
+  useEffect(() => {
+    if (isDesktopSheet) {
+      setIsTopSheetVisible(false);
+    }
+  }, [isDesktopSheet]);
 
   return (
     <section
@@ -93,9 +128,10 @@ const SectionDiscover = () => {
     >
       <div className="absolute inset-0 z-0">
         <MapView
-          markers={filteredLocations}
+          markers={mapMarkers}
           selectedMarkerId={activeMarkerId}
           onMarkerSelect={handleMarkerSelect}
+          offsetForOverlay={shouldOffsetMap}
         />
       </div>
 
@@ -113,18 +149,18 @@ const SectionDiscover = () => {
             allMarkers={locations}
             isDesktopLayout={isDesktopSheet}
             activeMarker={activeMarker ?? null}
-            onMarkerClear={() => setActiveMarkerId(null)}
+            onMarkerClear={clearActiveMarker}
           />
         </div>
       </div>
 
-      {!isDesktopSheet && (
-        <MarkerCard
-          marker={activeMarker ?? null}
-          onDismiss={() => setActiveMarkerId(null)}
+      {!isDesktopSheet && activeMarker ? (
+        <TopSheet
+          marker={activeMarker}
+          isOpen={isTopSheetVisible}
+          onDismiss={handleTopSheetDismiss}
         />
-      )}
-
+      ) : null}
     </section>
   );
 };

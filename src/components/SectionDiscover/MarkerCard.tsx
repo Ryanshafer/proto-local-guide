@@ -55,35 +55,37 @@ const MarkerCard = ({ marker, onDismiss, variant = "overlay" }: MarkerCardProps)
                 : "border border-slate-200 bg-white/95 shadow-2xl backdrop-blur"
             }
           >
-            <CardHeader className="flex flex-row items-start justify-between space-y-0">
+            <CardHeader className="space-y-3">
+              {isInline ? (
+                <div className="flex justify-start">
+                  <button
+                    type="button"
+                    onClick={onDismiss}
+                    className="flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                  >
+                    <ArrowLeft className="h-3 w-3" />
+                    Back
+                  </button>
+                </div>
+              ) : (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={onDismiss}
+                    className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:text-slate-800"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
               <div>
-                <CardTitle className="text-lg font-semibold text-slate-900">
-                  {marker.name}
-                </CardTitle>
+                <CardTitle className="text-lg font-semibold text-slate-900">{marker.name}</CardTitle>
                 <CardDescription className="text-sm capitalize text-slate-500">
                   {marker.category}
                 </CardDescription>
               </div>
-              {isInline ? (
-                <button
-                  type="button"
-                  onClick={onDismiss}
-                  className="flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                >
-                  <ArrowLeft className="h-3 w-3" />
-                  Back
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onDismiss}
-                  className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:text-slate-800"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
             </CardHeader>
-            <CardContent className="flex items-start justify-between gap-4 pt-0 text-sm text-slate-600">
+            <CardContent className="flex items-start justify-between gap-4 pt-0 text-sm text-slate-600 md:px-6 md:pb-6">
               <div className="flex-1">
                 <LocationInfo
                   markerDescription={marker.description}

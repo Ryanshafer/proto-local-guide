@@ -219,7 +219,10 @@ const BottomSheet = ({
               className={`space-y-3 overflow-y-auto pr-1 md:pr-2 ${
                 isAllSegment ? "pb-14" : "pb-14"
               }`}
-              style={{ maxHeight: listMaxHeight }}
+              style={{
+                maxHeight: listMaxHeight,
+                WebkitOverflowScrolling: "touch",
+              }}
             >
               {visibleMarkers.map((spot) => {
                 const isActive = spot.id === activeMarkerId;
