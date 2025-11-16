@@ -23,8 +23,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      artifact-name: dist-artifact
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -47,15 +45,29 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Prepare version folders
+        if: >
+          github.event_name == 'workflow_dispatch' && github.event.inputs.createVersion == 'true'
+          || contains(github.event.head_commit.message, 'deploy-version')
+        run: |
+          git clone --depth=1 --branch gh-pages https://github.com/${{ github.repository }} gh-pages || mkdir gh-pages
+          cd gh-pages
+          versions=$(ls -d v* 2>/dev/null || echo "")
+          if [ -z "$versions" ]; then
+            nextVersion=v1
+          else
+            latest=$(echo "$versions" | sed 's/v//' | sort -n | tail -1)
+            next=$((latest + 1))
+            nextVersion="v$next"
+          fi
+          echo NEXT_VERSION=$nextVersion >> $GITHUB_ENV
+          cd ..
+          mkdir -p dist/${nextVersion}
+          cp -r dist/* dist/${nextVersion}/
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
-
-      - name: Upload versioning artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist-artifact
           path: dist
 
   deploy:
@@ -68,53 +80,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-  version:
-    if: >
-      github.event_name == 'workflow_dispatch' && github.event.inputs.createVersion == 'true'
-      || contains(github.event.head_commit.message, 'deploy-version')
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ needs.build.outputs.artifact-name }}
-          path: dist
-
-      - name: Checkout gh-pages
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: gh-pages
-        continue-on-error: true
-
-      - name: Determine next version folder
-        run: |
-          cd gh-pages || exit 0
-          versions=$(ls -d v* 2>/dev/null || echo "")
-          if [ -z "$versions" ]; then
-            echo NEXT_VERSION=v1 >> $GITHUB_ENV
-          else
-            latest=$(echo "$versions" | sed 's/v//' | sort -n | tail -1)
-            next=$((latest + 1))
-            echo NEXT_VERSION=v$next >> $GITHUB_ENV
-          fi
-
-      - name: Copy build into version folder
-        run: |
-          source $GITHUB_ENV || true
-          mkdir -p version-dist/${NEXT_VERSION}
-          cp -r dist/* version-dist/${NEXT_VERSION}/
-
-      - name: Deploy versioned build
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: version-dist
-          destination_dir: .
-          keep_files: true
-
-      - name: Output version
-        run: |
-          echo "Created version: $NEXT_VERSION"
