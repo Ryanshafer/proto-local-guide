@@ -50,14 +50,31 @@ jobs:
           rm -rf dist-base
           cp -r dist dist-base
 
+      - name: Fetch existing versions
+        run: |
+          git clone --depth=1 --branch gh-pages https://github.com/${{ github.repository }} gh-pages || echo "gh-pages branch missing"
+
+      - name: Copy existing versions into dist
+        run: |
+          if [ -d gh-pages ]; then
+            shopt -s nullglob
+            for dir in gh-pages/v*/ ; do
+              cp -R "$dir" dist/
+            done
+          fi
+
       - name: Prepare version folders
         if: >
           github.event_name == 'workflow_dispatch' && github.event.inputs.createVersion == 'true'
           || contains(github.event.head_commit.message, 'deploy-version')
         run: |
-          git clone --depth=1 --branch gh-pages https://github.com/${{ github.repository }} gh-pages || mkdir gh-pages
-          cd gh-pages
-          versions=$(ls -d v* 2>/dev/null || echo "")
+          if [ -d gh-pages ]; then
+            cd gh-pages
+            versions=$(ls -d v* 2>/dev/null || echo "")
+            cd ..
+          else
+            versions=""
+          fi
           if [ -z "$versions" ]; then
             nextVersion=v1
           else
@@ -71,7 +88,9 @@ jobs:
           cp -r dist-base/* dist/${nextVersion}/
 
       - name: Cleanup snapshot
-        run: rm -rf dist-base
+        run: |
+          rm -rf dist-base
+          rm -rf gh-pages
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
