@@ -49,7 +49,7 @@ jobs:
           destination_dir: ./
 
   version:
-    if: |
+    if: >
       github.event_name == 'workflow_dispatch' && github.event.inputs.createVersion == 'true'
       || contains(github.event.head_commit.message, 'deploy-version')
     needs: build
@@ -82,11 +82,11 @@ jobs:
           cd gh-pages || exit 0
           versions=$(ls -d v* 2>/dev/null || echo "")
           if [ -z "$versions" ]; then
-            echo "NEXT_VERSION=v1" >> $GITHUB_ENV
+            echo NEXT_VERSION=v1 >> $GITHUB_ENV
           else
             latest=$(echo "$versions" | sed 's/v//' | sort -n | tail -1)
             next=$((latest + 1))
-            echo "NEXT_VERSION=v$next" >> $GITHUB_ENV
+            echo NEXT_VERSION=v$next >> $GITHUB_ENV
           fi
 
       - name: Copy latest build into version folder
@@ -102,4 +102,5 @@ jobs:
           destination_dir: ${{ env.NEXT_VERSION }}
 
       - name: Output version
-        run: echo "Created version: $NEXT_VERSION"
+        run: |
+          echo "Created version: $NEXT_VERSION"
