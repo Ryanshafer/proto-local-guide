@@ -1,32 +1,33 @@
-name: Deploy Astro site to Pages
+name: Build & Deploy with Optional Versioning
 
 on:
   push:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      createVersion:
+        description: "Create a new version folder (v1, v2, v3...)?"
+        required: false
+        default: "false"
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -37,21 +38,68 @@ jobs:
       - name: Test
         run: npm test --if-present
 
-      - name: Build
+      - name: Build project
         run: npm run build
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy latest build to /
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          path: dist
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dist
+          destination_dir: ./
 
-  deploy:
-    runs-on: ubuntu-latest
+  version:
+    if: |
+      github.event_name == 'workflow_dispatch' && github.event.inputs.createVersion == 'true'
+      || contains(github.event.head_commit.message, 'deploy-version')
     needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+        continue-on-error: true
+
+      - name: Determine next version folder
+        run: |
+          cd gh-pages || exit 0
+          versions=$(ls -d v* 2>/dev/null || echo "")
+          if [ -z "$versions" ]; then
+            echo "NEXT_VERSION=v1" >> $GITHUB_ENV
+          else
+            latest=$(echo "$versions" | sed 's/v//' | sort -n | tail -1)
+            next=$((latest + 1))
+            echo "NEXT_VERSION=v$next" >> $GITHUB_ENV
+          fi
+
+      - name: Copy latest build into version folder
+        run: |
+          mkdir -p version-dist
+          cp -r dist/* version-dist/
+
+      - name: Deploy versioned build
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: version-dist
+          destination_dir: ${{ env.NEXT_VERSION }}
+
+      - name: Output version
+        run: echo "Created version: $NEXT_VERSION"
