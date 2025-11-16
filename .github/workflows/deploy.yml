@@ -12,7 +12,7 @@ on:
         default: "false"
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -103,15 +103,16 @@ jobs:
 
       - name: Copy build into version folder
         run: |
-          mkdir -p version-dist
-          cp -r dist/* version-dist/
+          source $GITHUB_ENV || true
+          mkdir -p version-dist/${NEXT_VERSION}
+          cp -r dist/* version-dist/${NEXT_VERSION}/
 
       - name: Deploy versioned build
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: version-dist
-          destination_dir: ${{ env.NEXT_VERSION }}
+          destination_dir: .
           keep_files: true
 
       - name: Output version
