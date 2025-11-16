@@ -19,6 +19,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      artifact-name: dist-artifact
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,6 +43,12 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-artifact
+          path: dist
+
       - name: Deploy latest build to /
         uses: peaceiris/actions-gh-pages@v3
         with:
@@ -56,20 +64,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
         with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build project
-        run: npm run build
+          name: ${{ needs.build.outputs.artifact-name }}
+          path: dist
 
       - name: Checkout gh-pages
         uses: actions/checkout@v4
@@ -90,7 +89,7 @@ jobs:
             echo NEXT_VERSION=v$next >> $GITHUB_ENV
           fi
 
-      - name: Copy latest build into version folder
+      - name: Copy build into version folder
         run: |
           mkdir -p version-dist
           cp -r dist/* version-dist/
