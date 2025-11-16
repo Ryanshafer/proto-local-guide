@@ -45,6 +45,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Snapshot base build
+        run: |
+          rm -rf dist-base
+          cp -r dist dist-base
+
       - name: Prepare version folders
         if: >
           github.event_name == 'workflow_dispatch' && github.event.inputs.createVersion == 'true'
@@ -63,7 +68,10 @@ jobs:
           echo NEXT_VERSION=$nextVersion >> $GITHUB_ENV
           cd ..
           mkdir -p dist/${nextVersion}
-          cp -r dist/* dist/${nextVersion}/
+          cp -r dist-base/* dist/${nextVersion}/
+
+      - name: Cleanup snapshot
+        run: rm -rf dist-base
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
