@@ -1,4 +1,4 @@
-name: Deploy Astro site to Pages (with optional versioning)
+name: Deploy Astro site to gh-pages
 
 on:
   push:
@@ -6,22 +6,20 @@ on:
       - main
   workflow_dispatch:
     inputs:
-      createVersion:
-        description: "Create a new version folder (v1, v2, v3...)?"
+      targetFolder:
+        description: "Optional subfolder (e.g. v1, new-ui) to publish to within gh-pages"
         required: false
-        default: "false"
+        default: ""
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: "pages"
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -45,60 +43,53 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Snapshot base build
+      - name: Clone gh-pages
         run: |
-          rm -rf dist-base
-          cp -r dist dist-base
+          git clone --depth=1 --branch gh-pages https://github.com/${{ github.repository }} gh-pages || (
+            git init gh-pages
+            cd gh-pages
+            git checkout -b gh-pages
+          )
 
-      - name: Fetch existing versions
+      - name: Copy existing version folders
         run: |
-          git clone --depth=1 --branch gh-pages https://github.com/${{ github.repository }} gh-pages || echo "gh-pages branch missing"
-
-      - name: Copy existing versions into dist
-        run: |
-          shopt -s nullglob
-          for dir in gh-pages/v*/ ; do
-            target="dist/$(basename "$dir")"
-            rm -rf "$target"
-            cp -R "$dir" "$target"
-          done
-
-      - name: Prepare version folders
-        if: >
-          github.event_name == 'workflow_dispatch' && github.event.inputs.createVersion == 'true'
-          || contains(github.event.head_commit.message, 'deploy-version')
-        run: |
-          cd gh-pages
-          versions=$(ls -d v* 2>/dev/null || echo "")
-          cd ..
-          if [ -z "$versions" ]; then
-            nextVersion=v1
-          else
-            latest=$(echo "$versions" | sed 's/v//' | sort -n | tail -1)
-            next=$((latest + 1))
-            nextVersion="v$next"
+          if [ -d gh-pages ]; then
+            shopt -s nullglob
+            for dir in gh-pages/v*/ ; do
+              target="dist/$(basename "$dir")"
+              rm -rf "$target"
+              cp -R "$dir" "$target"
+            done
           fi
-          echo NEXT_VERSION=$nextVersion >> $GITHUB_ENV
-          mkdir -p dist/${nextVersion}
-          cp -r dist-base/. dist/${nextVersion}/
 
-      - name: Cleanup snapshot
+      - name: Publish build
+        env:
+          TARGET_FOLDER: ${{ github.event.inputs.targetFolder }}
         run: |
-          rm -rf dist-base
-          rm -rf gh-pages
+          set -e
+          TARGET="$TARGET_FOLDER"
+          [ -z "$TARGET" ] && TARGET="."
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
+          cd gh-pages
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          if [ "$TARGET" = "." ]; then
+            shopt -s dotglob
+            for entry in * .*; do
+              case "$entry" in
+                .|..|.git|v*) continue ;;
+                *) rm -rf "$entry" ;;
+              esac
+            done
+            shopt -u dotglob
+            cp -R ../dist/. .
+          else
+            rm -rf "$TARGET"
+            mkdir -p "$TARGET"
+            cp -R ../dist/. "$TARGET"/
+          fi
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git commit -m "Deploy ${GITHUB_SHA} -> ${TARGET}" || exit 0
+          git push origin gh-pages
