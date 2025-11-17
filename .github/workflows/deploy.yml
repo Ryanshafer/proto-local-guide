@@ -65,6 +65,7 @@ jobs:
       - name: Publish build
         env:
           TARGET_FOLDER: ${{ github.event.inputs.targetFolder }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
           TARGET="$TARGET_FOLDER"
@@ -88,8 +89,8 @@ jobs:
             cp -R ../dist/. "$TARGET"/
           fi
 
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "Deploy ${GITHUB_SHA} -> ${TARGET}" || exit 0
-          git push origin gh-pages
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} gh-pages
