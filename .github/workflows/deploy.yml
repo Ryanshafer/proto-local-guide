@@ -83,10 +83,12 @@ jobs:
             done
             shopt -u dotglob
             cp -R ../dist/. .
+            touch .nojekyll
           else
             rm -rf "$TARGET"
             mkdir -p "$TARGET"
             cp -R ../dist/. "$TARGET"/
+            touch "$TARGET/.nojekyll"
           fi
 
           git config --global user.name "github-actions[bot]"
